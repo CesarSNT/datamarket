@@ -1,0 +1,11 @@
+# Dependencias de Node (se regeneran con npm install)
+node_modules/
+
+# Credenciales locales
+.env
+
+# Exportaciones temporales de PlantUML
+out/
+
+# Configuracion local del editor
+.vscode/

@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: datamarket-postgres
+    environment:
+      POSTGRES_DB: datamarket
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+     - "5440:5432"
+      
+    volumes: 
+    - postgres_data:/var/lib/postgresql/data
+volumes:
+      postgres_data: 
+
+      #

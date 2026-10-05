@@ -1,0 +1,130 @@
+@startuml
+' ==========================================================
+'  DataMarket S.A.S. - Modelo LÓGICO (notación IE / pata de gallo)
+'  Tablas, PK, FK y cardinalidades. La N:M PEDIDO-PRODUCTO
+'  queda resuelta con la tabla DETALLE_PEDIDO.
+' ==========================================================
+title DataMarket S.A.S. - Modelo Lógico
+
+hide circle
+skinparam linetype ortho
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #444444
+  HeaderBackgroundColor #DCE8F5
+}
+
+entity "clientes" as clientes {
+  * id : PK
+  --
+  * nombre
+  * email <<UK>>
+  telefono
+  direccion
+  * fecha_registro
+  * activo
+}
+
+entity "categorias" as categorias {
+  * id : PK
+  --
+  * nombre <<UK>>
+  descripcion
+}
+
+entity "productos" as productos {
+  * id : PK
+  --
+  * categoria_id : FK
+  * sku <<UK>>
+  * nombre
+  descripcion
+  * precio
+  * activo
+  * fecha_creacion
+}
+
+entity "inventario" as inventario {
+  * id : PK
+  --
+  * producto_id : FK <<UK>>
+  * stock
+  * stock_minimo
+  * ultima_actualizacion
+}
+
+entity "pedidos" as pedidos {
+  * id : PK
+  --
+  * cliente_id : FK
+  * fecha
+  * estado
+  * total
+}
+
+entity "detalle_pedido" as detalle {
+  * id : PK
+  --
+  * pedido_id : FK
+  * producto_id : FK
+  * cantidad
+  * precio_unitario
+  * subtotal
+  ..
+  UK (pedido_id, producto_id)
+}
+
+entity "pagos" as pagos {
+  * id : PK
+  --
+  * pedido_id : FK
+  * monto
+  * metodo
+  * estado
+  * fecha
+}
+
+entity "usuarios" as usuarios {
+  * id : PK
+  --
+  * username <<UK>>
+  * email <<UK>>
+  * password_hash
+  * rol
+  * activo
+}
+
+entity "auditoria" as auditoria {
+  * id : PK
+  --
+  usuario
+  * fecha
+  * operacion
+  * tabla_afectada
+  registro_id
+  datos_anteriores
+  datos_nuevos
+}
+
+' ---------- Relaciones ----------
+categorias ||--o{ productos      : agrupa
+productos  ||--|| inventario     : tiene
+clientes   ||--o{ pedidos        : realiza
+pedidos    ||--|{ detalle        : contiene
+productos  ||--o{ detalle        : aparece en
+pedidos    ||--o{ pagos          : se paga con
+
+note bottom of auditoria
+  Sin FK: guarda cambios de cualquier tabla
+  (tabla_afectada + registro_id).
+end note
+
+legend right
+  * = NOT NULL     PK = clave primaria
+  FK = clave foránea   UK = única
+  ||--o{  uno a cero-o-muchos
+  ||--|{  uno a uno-o-muchos
+  ||--||  uno a uno
+endlegend
+@enduml

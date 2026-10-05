@@ -1,0 +1,143 @@
+@startuml
+' ==========================================================
+'  DataMarket S.A.S. - Modelo FÍSICO (PostgreSQL 16)
+'  Tipos exactos, restricciones (PK, FK, UNIQUE, NOT NULL,
+'  CHECK, DEFAULT) y acciones ON DELETE.
+'  Esquema: datamarket
+' ==========================================================
+title DataMarket S.A.S. - Modelo Físico (PostgreSQL 16)
+
+hide circle
+skinparam linetype ortho
+skinparam shadowing false
+skinparam defaultFontSize 11
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #444444
+  HeaderBackgroundColor #E3F1E3
+}
+
+entity "datamarket.clientes" as clientes {
+  * id : BIGSERIAL <<PK>>
+  --
+  * nombre : VARCHAR(150)
+  * email : VARCHAR(150) <<UNIQUE>>
+  telefono : VARCHAR(20)
+  direccion : VARCHAR(255)
+  * fecha_registro : TIMESTAMPTZ = now()
+  * activo : BOOLEAN = true
+}
+
+entity "datamarket.categorias" as categorias {
+  * id : BIGSERIAL <<PK>>
+  --
+  * nombre : VARCHAR(100) <<UNIQUE>>
+  descripcion : TEXT
+}
+
+entity "datamarket.productos" as productos {
+  * id : BIGSERIAL <<PK>>
+  --
+  * categoria_id : BIGINT <<FK>> RESTRICT
+  * sku : VARCHAR(50) <<UNIQUE>>
+  * nombre : VARCHAR(150)
+  descripcion : TEXT
+  * precio : NUMERIC(12,2) CHECK (precio > 0)
+  * activo : BOOLEAN = true
+  * fecha_creacion : TIMESTAMPTZ = now()
+}
+
+entity "datamarket.inventario" as inventario {
+  * id : BIGSERIAL <<PK>>
+  --
+  * producto_id : BIGINT <<FK>> <<UNIQUE>> RESTRICT
+  * stock : INTEGER = 0 CHECK (stock >= 0)
+  * stock_minimo : INTEGER = 5 CHECK (stock_minimo >= 0)
+  * ultima_actualizacion : TIMESTAMPTZ = now()
+}
+
+entity "datamarket.pedidos" as pedidos {
+  * id : BIGSERIAL <<PK>>
+  --
+  * cliente_id : BIGINT <<FK>> RESTRICT
+  * fecha : TIMESTAMPTZ = now()
+  * estado : VARCHAR(20) = 'PENDIENTE'
+    CHECK IN ('PENDIENTE','PAGADO','ENVIADO','ENTREGADO','CANCELADO')
+  * total : NUMERIC(12,2) = 0 CHECK (total >= 0)
+}
+
+entity "datamarket.detalle_pedido" as detalle {
+  * id : BIGSERIAL <<PK>>
+  --
+  * pedido_id : BIGINT <<FK>> CASCADE
+  * producto_id : BIGINT <<FK>> RESTRICT
+  * cantidad : INTEGER CHECK (cantidad > 0)
+  * precio_unitario : NUMERIC(12,2) CHECK (precio_unitario > 0)
+  * subtotal : NUMERIC(12,2)
+    GENERATED ALWAYS AS (cantidad * precio_unitario) STORED
+  ..
+  UNIQUE (pedido_id, producto_id)
+}
+
+entity "datamarket.pagos" as pagos {
+  * id : BIGSERIAL <<PK>>
+  --
+  * pedido_id : BIGINT <<FK>> RESTRICT
+  * monto : NUMERIC(12,2) CHECK (monto > 0)
+  * metodo : VARCHAR(20)
+    CHECK IN ('TARJETA','PSE','EFECTIVO','TRANSFERENCIA')
+  * estado : VARCHAR(20) = 'PENDIENTE'
+    CHECK IN ('PENDIENTE','APROBADO','RECHAZADO')
+  * fecha : TIMESTAMPTZ = now()
+}
+
+entity "datamarket.usuarios" as usuarios {
+  * id : BIGSERIAL <<PK>>
+  --
+  * username : VARCHAR(50) <<UNIQUE>>
+  * email : VARCHAR(150) <<UNIQUE>>
+  * password_hash : VARCHAR(255)
+  * rol : VARCHAR(20)
+    CHECK IN ('ADMIN','DEVELOPER','ANALYST','OPERATOR','AUDITOR')
+  * activo : BOOLEAN = true
+  * fecha_creacion : TIMESTAMPTZ = now()
+}
+
+entity "datamarket.auditoria" as auditoria {
+  * id : BIGSERIAL <<PK>>
+  --
+  usuario : TEXT = current_user
+  * fecha : TIMESTAMP = CURRENT_TIMESTAMP
+  * operacion : TEXT CHECK IN ('INSERT','UPDATE','DELETE')
+  * tabla_afectada : TEXT
+  registro_id : BIGINT
+  datos_anteriores : JSONB
+  datos_nuevos : JSONB
+}
+
+' ---------- Relaciones ----------
+categorias ||--o{ productos  : categoria_id
+productos  ||--|| inventario : producto_id
+clientes   ||--o{ pedidos    : cliente_id
+pedidos    ||--|{ detalle    : pedido_id
+productos  ||--o{ detalle    : producto_id
+pedidos    ||--o{ pagos      : pedido_id
+
+note right of detalle
+  precio_unitario se COPIA del producto
+  al comprar: el histórico no cambia
+  si luego sube el precio.
+end note
+
+note bottom of inventario
+  Separado de productos: el stock cambia en
+  cada compra; aislarlo reduce bloqueos
+  (Paso 7) y facilita auditarlo (Paso 11).
+end note
+
+legend right
+  * = NOT NULL      = valor  -> DEFAULT
+  RESTRICT / CASCADE -> acción ON DELETE de la FK
+  Dinero: NUMERIC(12,2) (nunca FLOAT)
+endlegend
+@enduml

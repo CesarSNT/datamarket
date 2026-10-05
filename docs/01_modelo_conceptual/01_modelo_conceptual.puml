@@ -1,0 +1,107 @@
+@startchen
+' ==========================================================
+'  DataMarket S.A.S. - Modelo CONCEPTUAL (notación Chen)
+'  Entidades, atributos principales, relaciones y cardinalidades.
+'  Sin tipos de datos ni FKs: eso va en el modelo lógico/físico.
+' ==========================================================
+title DataMarket S.A.S. - Modelo Conceptual
+
+entity CLIENTE {
+  id_cliente <<key>>
+  nombre
+  email
+  telefono
+  direccion
+  fecha_registro
+}
+
+entity CATEGORIA {
+  id_categoria <<key>>
+  nombre
+  descripcion
+}
+
+entity PRODUCTO {
+  id_producto <<key>>
+  sku
+  nombre
+  descripcion
+  precio
+  activo
+}
+
+entity INVENTARIO {
+  id_inventario <<key>>
+  stock
+  stock_minimo
+  ultima_actualizacion
+}
+
+entity PEDIDO {
+  id_pedido <<key>>
+  fecha
+  estado
+  total <<derived>>
+}
+
+entity PAGO {
+  id_pago <<key>>
+  monto
+  metodo
+  estado
+  fecha
+}
+
+entity USUARIO {
+  id_usuario <<key>>
+  username
+  email
+  rol
+  activo
+}
+
+entity AUDITORIA {
+  id_auditoria <<key>>
+  usuario
+  fecha
+  operacion
+  tabla_afectada
+  datos_anteriores
+  datos_nuevos
+}
+
+' ---------- Relaciones ----------
+relationship AGRUPA {
+}
+CATEGORIA -1- AGRUPA
+AGRUPA -N- PRODUCTO
+
+relationship TIENE {
+}
+PRODUCTO -1- TIENE
+TIENE -1- INVENTARIO
+
+relationship REALIZA {
+}
+CLIENTE -1- REALIZA
+REALIZA -N- PEDIDO
+
+' N:M entre PEDIDO y PRODUCTO (se resuelve con DETALLE_PEDIDO en el lógico)
+relationship CONTIENE {
+  cantidad
+  precio_unitario
+  subtotal <<derived>>
+}
+PEDIDO -M- CONTIENE
+CONTIENE -N- PRODUCTO
+
+relationship SE_PAGA_CON {
+}
+PEDIDO -1- SE_PAGA_CON
+SE_PAGA_CON -N- PAGO
+
+' AUDITORIA no se relaciona con FK fija: registra cambios de CUALQUIER tabla
+' (tabla_afectada + registro_id) y el usuario de BD que los hizo (current_user).
+' USUARIO representa a los empleados que usan el sistema (backoffice/API).
+
+@endchen

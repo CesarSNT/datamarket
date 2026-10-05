@@ -1,0 +1,78 @@
+### =====================================================
+### Pruebas de la API DataMarket
+### Abrir en VS Code con la extensión "REST Client"
+### y hacer clic en "Send Request" encima de cada petición.
+### =====================================================
+
+@base = http://localhost:3000
+
+### 0. Salud: confirma la conexión y el usuario de BD (debe ser usr_api)
+GET {{base}}/health
+
+### 1. Consultar productos (máximo 100)
+GET {{base}}/api/productos
+
+### 1b. Productos de una categoría
+GET {{base}}/api/productos?categoria=1
+
+### 1c. Un producto
+GET {{base}}/api/productos/3
+
+### 2. Consultar inventario de un producto
+GET {{base}}/api/inventario/3
+
+### 2b. Productos con inventario bajo (vista del Paso 9)
+GET {{base}}/api/inventario/bajo
+
+### 3. Crear un pedido (llama a sp_registrar_compra)
+POST {{base}}/api/pedidos
+Content-Type: application/json
+
+{
+  "cliente_id": 1,
+  "items": [
+    { "producto_id": 1, "cantidad": 2 },
+    { "producto_id": 2, "cantidad": 1 }
+  ],
+  "metodo_pago": "TARJETA"
+}
+
+### 4. Consultar pedidos de un cliente (últimos 50)
+GET {{base}}/api/pedidos?cliente_id=1
+
+### 4b. Detalle completo de un pedido (productos y pagos)
+GET {{base}}/api/pedidos/1
+
+### =====================================================
+### Casos de error (deben fallar con un mensaje claro)
+### =====================================================
+
+### E1. Stock insuficiente -> 409
+POST {{base}}/api/pedidos
+Content-Type: application/json
+
+{ "cliente_id": 1, "items": [{ "producto_id": 2, "cantidad": 9999 }], "metodo_pago": "PSE" }
+
+### E2. Cliente inexistente -> 404
+POST {{base}}/api/pedidos
+Content-Type: application/json
+
+{ "cliente_id": 999999, "items": [{ "producto_id": 1, "cantidad": 1 }], "metodo_pago": "PSE" }
+
+### E3. Sin productos -> 400
+POST {{base}}/api/pedidos
+Content-Type: application/json
+
+{ "cliente_id": 1, "items": [], "metodo_pago": "PSE" }
+
+### E4. Método de pago inválido -> 400
+POST {{base}}/api/pedidos
+Content-Type: application/json
+
+{ "cliente_id": 1, "items": [{ "producto_id": 1, "cantidad": 1 }], "metodo_pago": "BITCOIN" }
+
+### E5. Id no numérico -> 400
+GET {{base}}/api/pedidos/abc
+
+### E6. Pedido inexistente -> 404
+GET {{base}}/api/pedidos/99999999
